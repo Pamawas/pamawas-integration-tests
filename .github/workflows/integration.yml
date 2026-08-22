@@ -104,10 +104,10 @@ jobs:
           cd integration-tests
           # Wait for PostgreSQL
           sleep 5
-          # Run migrations from pamawas-schema
+          # Run migrations from pamawas-schema using migration-only script
           PAMAWAS_SCHEMA_DATABASE_URL="postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable" \
           PAMAWAS_SCHEMA_USE_EMBEDDED_MIGRATIONS=true \
-          go run ../pamawas-schema/main.go
+          bash ../scripts/run-migrations.sh
         env:
           PAMAWAS_SCHEMA_DATABASE_URL: "postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable"
           PAMAWAS_SCHEMA_USE_EMBEDDED_MIGRATIONS: "true"
