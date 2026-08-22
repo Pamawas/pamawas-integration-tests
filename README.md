@@ -87,3 +87,4 @@ go run ../pamawas-schema/main.go migrate
 export DATABASE_URL="postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable"
 go test -v -race -count=1 ./...
 ```# Trigger fresh CI run
+# Trigger with fixed pamawas-schema
