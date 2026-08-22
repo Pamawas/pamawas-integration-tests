@@ -101,15 +101,17 @@ jobs:
 
       - name: Run database migrations
         run: |
-          cd integration-tests
+          cd /github/workspace/pamawas-schema
           # Wait for PostgreSQL
           sleep 5
-          # Run migrations from pamawas-schema using migration-only script
-          PAMAWAS_SCHEMA_DATABASE_URL="postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable" \
+          # Run migrations with migrate-only mode
+          DATABASE_URL="postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable" \
+          PAMAWAS_SCHEMA_MIGRATE_ONLY=true \
           PAMAWAS_SCHEMA_USE_EMBEDDED_MIGRATIONS=true \
-          bash ../scripts/run-migrations.sh
+          go run ./main.go
         env:
-          PAMAWAS_SCHEMA_DATABASE_URL: "postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable"
+          DATABASE_URL: "postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable"
+          PAMAWAS_SCHEMA_MIGRATE_ONLY: "true"
           PAMAWAS_SCHEMA_USE_EMBEDDED_MIGRATIONS: "true"
 
       - name: Run integration tests
