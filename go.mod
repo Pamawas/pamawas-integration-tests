@@ -1,4 +1,4 @@
-module github.com/Pamawas/integration-tests
+module github.com/Pamawas/pamawas-integration-tests
 
 go 1.26
 
