@@ -106,15 +106,10 @@ jobs:
       - name: Run database migrations
         run: |
           cd /github/workspace/pamawas-schema
-          # Debug: check if pg_isready is available
-          echo "Checking pg_isready..."
-          which pg_isready
-          pg_isready --version
-          
           # Wait for PostgreSQL to be ready
           echo "Waiting for PostgreSQL..."
           for i in {1..30}; do
-            if pg_isready -h localhost -p 5432 -U pamawas -d pamawas 2>/dev/null; then
+            if pg_isready -h postgres -p 5432 -U pamawas -d pamawas 2>/dev/null; then
               echo "PostgreSQL is ready"
               break
             fi
@@ -127,7 +122,7 @@ jobs:
           echo "Starting migration runner..."
           go run ./main.go
         env:
-          DATABASE_URL: "postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable"
+          DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
           PAMAWAS_SCHEMA_MIGRATE_ONLY: "true"
           PAMAWAS_SCHEMA_USE_EMBEDDED_MIGRATIONS: "true"
 
