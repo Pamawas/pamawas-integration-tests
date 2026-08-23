@@ -92,3 +92,4 @@ go test -v -race -count=1 ./...
 # Trigger with self-hosted runner
 # Trigger fresh run
 # Trigger with clean state
+# Trigger fresh run with fixed go.mod
