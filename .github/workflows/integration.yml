@@ -102,7 +102,21 @@ jobs:
       - name: Run database migrations
         run: |
           cd /github/workspace/pamawas-schema
-          bash ../scripts/run-migrations.sh
+          # Wait for PostgreSQL to be ready
+          echo "Waiting for PostgreSQL..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U pamawas -d pamawas 2>/dev/null; then
+              echo "PostgreSQL is ready"
+              break
+            fi
+            echo "Waiting for PostgreSQL... ($i/30)"
+            sleep 1
+          done
+          # Download dependencies
+          go mod download
+          # Run migrations with migrate-only mode
+          echo "Starting migration runner..."
+          go run ./main.go
         env:
           DATABASE_URL: "postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable"
           PAMAWAS_SCHEMA_MIGRATE_ONLY: "true"
