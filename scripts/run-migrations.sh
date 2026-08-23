@@ -5,8 +5,8 @@ set -euo pipefail
 
 echo "Waiting for PostgreSQL..."
 
-for i in {1..30}; do
-  if go run -exec 'sh -c' - <<'GOEOF'
+# Create a temporary Go file for checking PostgreSQL
+cat > /tmp/wait_pg.go << 'GOEOF'
 package main
 
 import (
@@ -35,7 +35,9 @@ func main() {
 	os.Exit(0)
 }
 GOEOF
-  then
+
+for i in {1..30}; do
+  if go run /tmp/wait_pg.go; then
     echo "PostgreSQL is ready"
     break
   fi
