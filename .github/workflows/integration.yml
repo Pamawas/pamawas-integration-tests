@@ -125,13 +125,13 @@ jobs:
           
           # Test direct connection with psql
           echo "Testing direct connection with psql..."
-          PGPASSWORD=pamawas psql -h localhost -U pamawas -d pamawas -c "SELECT 1" || echo "psql failed"
+          PGPASSWORD=pamawas psql -h 127.0.0.1 -U pamawas -d pamawas -c "SELECT 1" || echo "psql failed"
           
           # Wait for PostgreSQL to be ready with more retries
           echo "Waiting for PostgreSQL..."
           for i in {1..60}; do
-            echo "Attempt $i/60: pg_isready -h localhost -p 5432 -U pamawas -d pamawas"
-            if pg_isready -h localhost -p 5432 -U pamawas -d pamawas 2>/dev/null; then
+            echo "Attempt $i/60: pg_isready -h 127.0.0.1 -p 5432 -U pamawas -d pamawas"
+            if pg_isready -h 127.0.0.1 -p 5432 -U pamawas -d pamawas 2>/dev/null; then
               echo "PostgreSQL is ready"
               break
             fi
@@ -141,7 +141,7 @@ jobs:
           
           # Additional check: try to connect with psql
           echo "Verifying connection with psql..."
-          PGPASSWORD=pamawas psql -h localhost -U pamawas -d pamawas -c "SELECT version();" || echo "psql connection failed"
+          PGPASSWORD=pamawas psql -h 127.0.0.1 -U pamawas -d pamawas -c "SELECT version();" || echo "psql connection failed"
           
           # Debug: check network
           echo "Checking network connections..."
@@ -154,7 +154,7 @@ jobs:
           
           # Debug: test migration runner with verbose output
           echo "Testing migration runner..."
-          DATABASE_URL="postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable" \
+          DATABASE_URL="postgres://pamawas:pamawas@127.0.0.1:5432/pamawas?sslmode=disable" \
           PAMAWAS_SCHEMA_MIGRATE_ONLY=true \
           PAMAWAS_SCHEMA_USE_EMBEDDED_MIGRATIONS=true \
           go run ./main.go -v 2>&1 || echo "Migration runner failed"
@@ -165,7 +165,7 @@ jobs:
           echo "Starting migration runner..."
           go run ./main.go
         env:
-          DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+          DATABASE_URL: "postgres://pamawas:pamawas@127.0.0.1:5432/pamawas?sslmode=disable"
           PAMAWAS_SCHEMA_MIGRATE_ONLY: "true"
           PAMAWAS_SCHEMA_USE_EMBEDDED_MIGRATIONS: "true"
 
