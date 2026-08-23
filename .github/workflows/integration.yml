@@ -103,6 +103,18 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y postgresql-client
 
+      - name: Wait for PostgreSQL service
+        run: |
+          echo "Waiting for PostgreSQL service to be healthy..."
+          for i in {1..30}; do
+            if docker inspect --format='{{.State.Health.Status}}' $(docker ps -q --filter "name=postgres") 2>/dev/null | grep -q "healthy"; then
+              echo "PostgreSQL service is healthy"
+              break
+            fi
+            echo "Waiting for PostgreSQL service health check... ($i/30)"
+            sleep 2
+          done
+
       - name: Run database migrations
         run: |
           cd /github/workspace/pamawas-schema
