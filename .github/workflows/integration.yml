@@ -84,12 +84,19 @@ jobs:
 
       - name: Install Python 3.14
         run: |
-          # Install Python 3.14 from deadsnakes PPA
+          # Install Python 3.14 from source
           sudo apt-get update
-          sudo apt-get install -y software-properties-common
-          sudo add-apt-repository -y ppa:deadsnakes/ppa
-          sudo apt-get update
-          sudo apt-get install -y python3.14 python3.14-venv python3.14-dev
+          sudo apt-get install -y build-essential libssl-dev zlib1g-dev \
+            libncurses5-dev libncursesw5-dev libreadline-dev libsqlite3-dev \
+            libgdbm-dev libdb5.3-dev libbz2-dev libexpat1-dev liblzma-dev \
+            libffi-dev uuid-dev tk-dev wget
+          cd /tmp
+          wget https://www.python.org/ftp/python/3.14.0/Python-3.14.0.tgz
+          tar xzf Python-3.14.0.tgz
+          cd Python-3.14.0
+          ./configure --enable-optimizations
+          sudo make -j$(nproc) altinstall
+          sudo ldconfig
 
       - name: Set up Python
         uses: actions/setup-python@v5
