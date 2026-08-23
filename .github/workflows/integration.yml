@@ -189,7 +189,7 @@ jobs:
           # Add Slack/Discord notification here if needed
 
 env:
-  DATABASE_URL: "postgres://pamawas:pamawas@host.docker.internal:5432/pamawas?sslmode=disable"
+  DATABASE_URL: "postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable"
   LLM_BASE_URL: "https://api.openai.com/v1"
   LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
   LLM_MODEL: "gpt-4o-mini"
