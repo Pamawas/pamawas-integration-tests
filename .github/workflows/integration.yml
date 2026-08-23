@@ -152,6 +152,13 @@ jobs:
           chmod +x ../scripts/test-go-conn.sh
           bash ../scripts/test-go-conn.sh
           
+          # Debug: test migration runner with verbose output
+          echo "Testing migration runner..."
+          DATABASE_URL="postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable" \
+          PAMAWAS_SCHEMA_MIGRATE_ONLY=true \
+          PAMAWAS_SCHEMA_USE_EMBEDDED_MIGRATIONS=true \
+          go run ./main.go -v 2>&1 || echo "Migration runner failed"
+          
           # Download dependencies
           go mod download
           # Run migrations with migrate-only mode
