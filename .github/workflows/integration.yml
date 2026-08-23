@@ -82,6 +82,15 @@ jobs:
           go-version: '1.26'
           cache: true
 
+      - name: Install Python 3.14
+        run: |
+          # Install Python 3.14 from deadsnakes PPA
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          sudo add-apt-repository -y ppa:deadsnakes/ppa
+          sudo apt-get update
+          sudo apt-get install -y python3.14 python3.14-venv python3.14-dev
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
