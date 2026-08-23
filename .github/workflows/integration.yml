@@ -104,6 +104,8 @@ jobs:
           cd /github/workspace/pamawas-schema
           # Wait for PostgreSQL
           sleep 5
+          # Download dependencies
+          go mod download
           # Run migrations with migrate-only mode
           echo "Starting migration runner..."
           go run ./main.go
