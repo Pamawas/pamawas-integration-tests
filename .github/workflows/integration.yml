@@ -165,7 +165,7 @@ jobs:
           echo "Starting migration runner..."
           go run ./main.go
         env:
-          DATABASE_URL: "postgres://pamawas:pamawas@127.0.0.1:5432/pamawas?sslmode=disable"
+          DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
           PAMAWAS_SCHEMA_MIGRATE_ONLY: "true"
           PAMAWAS_SCHEMA_USE_EMBEDDED_MIGRATIONS: "true"
 
