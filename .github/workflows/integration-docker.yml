@@ -1,4 +1,4 @@
-name: Integration Tests (Docker)
+name: Integration Tests (Docker Compose)
 
 on:
   push:
@@ -12,19 +12,6 @@ jobs:
     name: Cross-Component E2E Tests
     runs-on: self-hosted
     timeout-minutes: 30
-
-    container:
-      image: ghcr.io/pamawas/pamawas-integration-tests:latest
-      options: --user root
-      env:
-        DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
-        LLM_BASE_URL: "https://api.openai.com/v1"
-        LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-        LLM_MODEL: "gpt-4o-mini"
-        PROMETHEUS_URL: "http://localhost:9090"
-        LOKI_URL: "http://localhost:3100"
-        ENVIRONMENT: "test"
-        LOG_LEVEL: "debug"
 
     services:
       postgres:
