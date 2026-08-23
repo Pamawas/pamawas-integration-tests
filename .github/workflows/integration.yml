@@ -111,21 +111,26 @@ jobs:
           which pg_isready
           pg_isready --version
           
-          # Test direct connection
+          # Test direct connection with psql
           echo "Testing direct connection with psql..."
           PGPASSWORD=pamawas psql -h localhost -U pamawas -d pamawas -c "SELECT 1" || echo "psql failed"
           
-          # Wait for PostgreSQL to be ready
+          # Wait for PostgreSQL to be ready with more retries
           echo "Waiting for PostgreSQL..."
-          for i in {1..30}; do
-            echo "Attempt $i/30: pg_isready -h localhost -p 5432 -U pamawas -d pamawas"
+          for i in {1..60}; do
+            echo "Attempt $i/60: pg_isready -h localhost -p 5432 -U pamawas -d pamawas"
             if pg_isready -h localhost -p 5432 -U pamawas -d pamawas 2>/dev/null; then
               echo "PostgreSQL is ready"
               break
             fi
-            echo "Waiting for PostgreSQL... ($i/30)"
-            sleep 1
+            echo "Waiting for PostgreSQL... ($i/60)"
+            sleep 2
           done
+          
+          # Additional check: try to connect with psql
+          echo "Verifying connection with psql..."
+          PGPASSWORD=pamawas psql -h localhost -U pamawas -d pamawas -c "SELECT version();" || echo "psql connection failed"
+          
           # Download dependencies
           go mod download
           # Run migrations with migrate-only mode
