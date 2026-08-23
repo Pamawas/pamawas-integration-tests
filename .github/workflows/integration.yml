@@ -106,6 +106,11 @@ jobs:
       - name: Run database migrations
         run: |
           cd /github/workspace/pamawas-schema
+          # Debug: check if pg_isready is available
+          echo "Checking pg_isready..."
+          which pg_isready
+          pg_isready --version
+          
           # Wait for PostgreSQL to be ready
           echo "Waiting for PostgreSQL..."
           for i in {1..30}; do
