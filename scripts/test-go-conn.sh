@@ -33,4 +33,5 @@ func main() {
 }
 GOEOF
 
-DATABASE_URL="postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable" go run /tmp/test_conn.go
+# Use the same DATABASE_URL as the main migration step
+DATABASE_URL="postgres://pamawas:pamawas@127.0.0.1:5432/pamawas?sslmode=disable" go run /tmp/test_conn.go
