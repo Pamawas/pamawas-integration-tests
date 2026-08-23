@@ -149,6 +149,7 @@ jobs:
           
           # Debug: test Go connection directly
           echo "Testing Go database connection..."
+          chmod +x ../scripts/test-go-conn.sh
           bash ../scripts/test-go-conn.sh
           
           # Download dependencies
