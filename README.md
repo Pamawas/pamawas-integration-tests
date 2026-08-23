@@ -90,3 +90,4 @@ go test -v -race -count=1 ./...
 # Trigger with fixed pamawas-schema
 # Trigger with fixed pamawas-schema
 # Trigger with self-hosted runner
+# Trigger fresh run
