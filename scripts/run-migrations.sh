@@ -1,43 +1,13 @@
 #!/usr/bin/env bash
-# Wait for PostgreSQL to be ready using a simple Go program
+# Wait for PostgreSQL to be ready
 
 set -euo pipefail
 
 echo "Waiting for PostgreSQL..."
 
-# Create a temporary Go file for checking PostgreSQL
-cat > /tmp/wait_pg.go << 'GOEOF'
-package main
-
-import (
-	"context"
-	"database/sql"
-	"fmt"
-	"os"
-	"time"
-
-	_ "github.com/lib/pq"
-)
-
-func main() {
-	db, err := sql.Open("postgres", os.Getenv("DATABASE_URL"))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	if err := db.PingContext(ctx); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println("PostgreSQL is ready")
-	os.Exit(0)
-}
-GOEOF
-
+# Use pg_isready which is available in the GitHub Actions runner
 for i in {1..30}; do
-  if go run /tmp/wait_pg.go; then
+  if pg_isready -h localhost -p 5432 -U pamawas -d pamawas 2>/dev/null; then
     echo "PostgreSQL is ready"
     break
   fi
