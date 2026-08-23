@@ -13,98 +13,15 @@ jobs:
     runs-on: self-hosted
     timeout-minutes: 30
 
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: pamawas
-          POSTGRES_PASSWORD: pamawas
-          POSTGRES_DB: pamawas
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U pamawas -d pamawas"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
       - name: Checkout integration tests
         uses: actions/checkout@v4
-        with:
-          path: integration-tests
 
-      - name: Checkout pamawas-ingest
-        uses: actions/checkout@v4
-        with:
-          repository: Pamawas/pamawas-ingest
-          path: pamawas-ingest
-          ref: dev
-
-      - name: Checkout pamawas-correlator
-        uses: actions/checkout@v4
-        with:
-          repository: Pamawas/pamawas-correlator
-          path: pamawas-correlator
-          ref: dev
-
-      - name: Checkout pamawas-investigator
-        uses: actions/checkout@v4
-        with:
-          repository: Pamawas/pamawas-investigator
-          path: pamawas-investigator
-          ref: dev
-
-      - name: Checkout pamawas-reporter
-        uses: actions/checkout@v4
-        with:
-          repository: Pamawas/pamawas-reporter
-          path: pamawas-reporter
-          ref: dev
-
-      - name: Checkout pamawas-scheduler
-        uses: actions/checkout@v4
-        with:
-          repository: Pamawas/pamawas-scheduler
-          path: pamawas-scheduler
-          ref: dev
-
-      - name: Checkout pamawas-schema
-        uses: actions/checkout@v4
-        with:
-          repository: Pamawas/pamawas-schema
-          path: pamawas-schema
-          ref: dev
-
-      - name: Create Go workspace
+      - name: Run docker-compose integration tests
         run: |
-          cd integration-tests
-          go work init ../pamawas-ingest ../pamawas-correlator ../pamawas-investigator ../pamawas-reporter ../pamawas-scheduler ../pamawas-schema
-          go work use .
-
-      - name: Run database migrations
-        run: |
-          cd /github/workspace/pamawas-schema
-          # Wait for PostgreSQL to be ready
-          echo "Waiting for PostgreSQL..."
-          for i in {1..60}; do
-            if pg_isready -h postgres -p 5432 -U pamawas -d pamawas 2>/dev/null; then
-              echo "PostgreSQL is ready"
-              break
-            fi
-            echo "Waiting for PostgreSQL... ($i/60)"
-            sleep 2
-          done
-          go run ./main.go
+          docker-compose up --build --abort-on-container-exit integration-tests
         env:
-          DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
-          PAMAWAS_SCHEMA_MIGRATE_ONLY: "true"
-          PAMAWAS_SCHEMA_USE_EMBEDDED_MIGRATIONS: "true"
-
-      - name: Run integration tests
-        run: |
-          cd integration-tests
-          go test -v -race -count=1 -timeout 20m ./...
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
 
       - name: Upload test results
         if: always()
@@ -114,7 +31,6 @@ jobs:
           path: integration-tests/
           retention-days: 7
 
-      - name: Notify on failure
-        if: failure()
-        run: |
-          echo "Integration tests failed. Check GitHub Actions for details."
+      - name: Cleanup
+        if: always()
+        run: docker-compose down -v

@@ -1,0 +1,25 @@
+FROM golang:1.26-bullseye
+
+# Install test dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /github/workspace/integration-tests
+
+# Copy go.mod and go.sum first for caching
+COPY go.mod go.sum ./
+
+# Copy test files
+COPY full_pipeline_e2e_test.go ./
+
+# Download dependencies
+RUN go mod download
+
+# Create test runner script
+RUN echo '#!/bin/bash\n\
+cd /github/workspace/integration-tests\n\
+go test -v -race -count=1 -timeout 20m ./...\n' > /run-tests.sh && chmod +x /run-tests.sh
+
+CMD ["/run-tests.sh"]

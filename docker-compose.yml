@@ -1,0 +1,132 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: pamawas
+      POSTGRES_PASSWORD: pamawas
+      POSTGRES_DB: pamawas
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pamawas -d pamawas"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pamawas-schema:
+    image: ghcr.io/pamawas/pamawas-schema:dev
+    environment:
+      DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+      PAMAWAS_SCHEMA_MIGRATE_ONLY: "true"
+      PAMAWAS_SCHEMA_USE_EMBEDDED_MIGRATIONS: "true"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["./main"]
+
+  pamawas-ingest:
+    image: ghcr.io/pamawas/pamawas-ingest:dev
+    environment:
+      DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+      WEBHOOK_TOKEN: "test-token"
+      TEST_MODE: "true"
+      MAX_BODY_BYTES: "1048576"
+      PORT: "8080"
+      LOG_LEVEL: "info"
+      ENVIRONMENT: "test"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  pamawas-correlator:
+    image: ghcr.io/pamawas/pamawas-correlator:dev
+    environment:
+      DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+      PORT: "8081"
+      LOG_LEVEL: "info"
+      ENVIRONMENT: "test"
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  pamawas-investigator:
+    image: ghcr.io/pamawas/pamawas-investigator:dev
+    environment:
+      DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+      LLM_BASE_URL: "https://api.openai.com/v1"
+      LLM_API_KEY: "${LLM_API_KEY}"
+      LLM_MODEL: "gpt-4o-mini"
+      PROMETHEUS_URL: "http://prometheus:9090"
+      LOKI_URL: "http://loki:3100"
+      PORT: "8082"
+      LOG_LEVEL: "debug"
+      ENVIRONMENT: "test"
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  pamawas-scheduler:
+    image: ghcr.io/pamawas/pamawas-scheduler:dev
+    environment:
+      DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+      PORT: "8083"
+      LOG_LEVEL: "info"
+      ENVIRONMENT: "test"
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  pamawas-reporter:
+    image: ghcr.io/pamawas/pamawas-reporter:dev
+    environment:
+      DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+      DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/test"
+      TELEGRAM_BOT_TOKEN: "fake-token"
+      TELEGRAM_CHAT_ID: "fake-chat"
+      MODE: "discord"
+      PORT: "8084"
+      LOG_LEVEL: "info"
+      ENVIRONMENT: "test"
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  integration-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    environment:
+      DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+      INGEST_URL: "http://pamawas-ingest:8080"
+      CORRELATOR_URL: "http://pamawas-correlator:8081"
+      INVESTIGATOR_URL: "http://pamawas-investigator:8082"
+      SCHEDULER_URL: "http://pamawas-scheduler:8083"
+      REPORTER_URL: "http://pamawas-reporter:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pamawas-schema:
+        condition: service_completed_successfully
+      pamawas-ingest:
+        condition: service_started
+      pamawas-correlator:
+        condition: service_started
+      pamawas-investigator:
+        condition: service_started
+      pamawas-scheduler:
+        condition: service_started
+      pamawas-reporter:
+        condition: service_started
+    command: ["./run-tests.sh"]
