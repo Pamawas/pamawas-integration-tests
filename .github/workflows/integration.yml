@@ -131,6 +131,10 @@ jobs:
           echo "Verifying connection with psql..."
           PGPASSWORD=pamawas psql -h localhost -U pamawas -d pamawas -c "SELECT version();" || echo "psql connection failed"
           
+          # Debug: check network
+          echo "Checking network connections..."
+          netstat -tlnp | grep 5432 || ss -tlnp | grep 5432
+          
           # Download dependencies
           go mod download
           # Run migrations with migrate-only mode
