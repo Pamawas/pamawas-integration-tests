@@ -111,6 +111,10 @@ jobs:
           which pg_isready
           pg_isready --version
           
+          # Test direct connection
+          echo "Testing direct connection with psql..."
+          PGPASSWORD=pamawas psql -h localhost -U pamawas -d pamawas -c "SELECT 1" || echo "psql failed"
+          
           # Wait for PostgreSQL to be ready
           echo "Waiting for PostgreSQL..."
           for i in {1..30}; do
