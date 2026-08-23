@@ -114,6 +114,10 @@ jobs:
             echo "Waiting for PostgreSQL service health check... ($i/30)"
             sleep 2
           done
+          
+          # Additional wait for DB to be fully ready
+          echo "Additional wait for database to be fully ready..."
+          sleep 10
 
       - name: Run database migrations
         run: |
