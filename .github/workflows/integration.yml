@@ -12,7 +12,7 @@ jobs:
     name: Cross-Component E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    
+
     services:
       postgres:
         image: postgres:16-alpine
@@ -105,6 +105,7 @@ jobs:
           # Wait for PostgreSQL
           sleep 5
           # Run migrations with migrate-only mode
+          echo "Starting migration runner..."
           go run ./main.go
         env:
           DATABASE_URL: "postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable"
