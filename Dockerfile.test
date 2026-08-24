@@ -1,25 +1,49 @@
-FROM golang:1.26-trixie
-
-# Install test dependencies
-RUN apt-get update && apt-get install -y \
-    git \
-    postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+# Builder stage - compile test binary
+FROM golang:1.26-trixie AS builder
 
 WORKDIR /github/workspace/integration-tests
 
 # Copy go.mod and go.sum first for caching
 COPY go.mod go.sum ./
 
-# Copy test files
-COPY full_pipeline_e2e_test.go ./
-
 # Download dependencies
 RUN go mod download
 
+# Copy test files
+COPY full_pipeline_e2e_test.go ./
+
+# Build test binary
+RUN CGO_ENABLED=1 go test -c -o /test-binary -v .
+
+# Runtime stage - minimal image with test binary
+FROM debian:trixie-slim
+
+# Install test dependencies (postgresql-client for any DB checks)
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /tests
+
+# Copy test binary from builder
+COPY --from=builder /test-binary /tests/integration-test
+
 # Create test runner script
 RUN echo '#!/bin/bash\n\
-cd /github/workspace/integration-tests\n\
-go test -v -race -count=1 -timeout 20m ./...\n' > /run-tests.sh && chmod +x /run-tests.sh
+set -euo pipefail\n\
+\n\
+echo "Waiting for PostgreSQL..."\n\
+for i in {1..30}; do\n\
+  if pg_isready -h postgres -p 5432 -U pamawas -d pamawas 2>/dev/null; then\n\
+    echo "PostgreSQL is ready"\n\
+    break\n\
+  fi\n\
+  echo "Waiting for PostgreSQL... ($i/30)"\n\
+  sleep 1\n\
+done\n\
+\n\
+echo "Running integration tests..."\n\
+/tests/integration-test -v -race -count=1 -timeout 20m\n' > /run-tests.sh && chmod +x /run-tests.sh
 
 CMD ["/run-tests.sh"]

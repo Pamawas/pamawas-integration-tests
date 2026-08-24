@@ -9,23 +9,29 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/Pamawas/pamawas-correlator/service"
+	correlatorservice "github.com/Pamawas/pamawas-correlator/service"
+	correlatormetrics "github.com/Pamawas/pamawas-correlator/metrics"
+	ingestconfig "github.com/Pamawas/pamawas-ingest/config"
 	ingesthandlers "github.com/Pamawas/pamawas-ingest/handlers"
+	ingestmetrics "github.com/Pamawas/pamawas-ingest/metrics"
 	"github.com/Pamawas/pamawas-ingest/models"
 	"github.com/Pamawas/pamawas-reporter/fakes"
-	reportermodels "github.com/Pamawas/pamawas-reporter/models"
-	"github.com/Pamawas/pamawas-scheduler/service"
+	reporterservice "github.com/Pamawas/pamawas-reporter/service"
+	reportermodel "github.com/Pamawas/pamawas-reporter/models"
+	reportermtrics "github.com/Pamawas/pamawas-reporter/metrics"
+	schedulerservice "github.com/Pamawas/pamawas-scheduler/service"
+	schedulermetrics "github.com/Pamawas/pamawas-scheduler/metrics"
 	"github.com/google/uuid"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
+	_ "github.com/lib/pq"
 )
 
 // TestFullPipelineE2E runs the complete webhook-to-delivery pipeline
+// against services started by docker-compose (not testcontainers).
 func TestFullPipelineE2E(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -33,27 +39,10 @@ func TestFullPipelineE2E(t *testing.T) {
 
 	ctx := context.Background()
 
-	// 1. Start PostgreSQL testcontainer
-	pgContainer, err := postgres.Run(ctx,
-		"postgres:16-alpine",
-		postgres.WithDatabase("pamawas"),
-		postgres.WithUsername("pamawas"),
-		postgres.WithPassword("pamawas"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2).
-				WithStartupTimeout(30*time.Second),
-		),
-	)
-	if err != nil {
-		t.Fatalf("Failed to start PostgreSQL container: %v", err)
-	}
-	defer pgContainer.Terminate(ctx)
-
-	// Get connection string
-	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
-	if err != nil {
-		t.Fatalf("Failed to get connection string: %v", err)
+	// 1. Get database connection from environment (set by docker-compose)
+	connStr := os.Getenv("DATABASE_URL")
+	if connStr == "" {
+		t.Fatal("DATABASE_URL environment variable not set")
 	}
 
 	// 2. Connect to database
@@ -63,7 +52,12 @@ func TestFullPipelineE2E(t *testing.T) {
 	}
 	defer db.Close()
 
-	// 3. Run migrations
+	// Wait for database to be ready
+	if err := waitForDB(ctx, db); err != nil {
+		t.Fatalf("Database not ready: %v", err)
+	}
+
+	// 3. Run migrations (idempotent - pamawas-schema should have run already)
 	if err := runMigrations(db); err != nil {
 		t.Fatalf("Failed to run migrations: %v", err)
 	}
@@ -78,46 +72,48 @@ func TestFullPipelineE2E(t *testing.T) {
 	defer telegramServer.Close()
 
 	// 5. Setup Ingest handler
-	ingestConfig := models.Config{
-		WebhookToken:   "test-token",
-		TestMode:       true,
-		MaxBodyBytes:   1024 * 1024,
-		Port:           "8080",
-		LogLevel:       "info",
-		Environment:    "test",
+	ingestCfg := ingestconfig.Config{
+		DatabaseURL:  connStr,
+		WebhookToken: "test-token",
+		TestMode:     true,
+		MaxBodyBytes: 1024 * 1024,
+		Port:         "8080",
+		LogLevel:     "info",
+		Environment:  "test",
 	}
-	ingestHandler := ingesthandlers.NewHandler(db, ingestConfig, nil)
+	ingestMetrics := ingestmetrics.NewMetrics()
+	ingestHandler := ingesthandlers.NewHandler(db, ingestCfg, ingestMetrics)
 
-	// 6. Setup Correlator
-	correlatorConfig := service.CorrelatorConfig{
-		TimeWindow:      10 * time.Minute,
-		Interval:        1 * time.Minute,
-		Mode:            "auto",
-		InvestigatorURL: "http://localhost:8082/v1/investigations",
-		ServiceToken:    "test-service-token",
-	}
-	correlator := service.NewCorrelator(db, correlatorConfig)
+	// 6. Setup Correlator (we don't need to keep reference, just ensure it can be created)
+	_ = correlatorservice.NewCorrelator(
+		db,
+		10*time.Minute, // timeWindow
+		1*time.Minute,  // interval
+		"auto",         // mode
+		correlatormetrics.NewMetrics(),
+		getEnvOrDefault("INVESTIGATOR_URL", "http://localhost:8082/v1/investigations"),
+	)
 
 	// 7. Setup Reporter with fake delivery URLs
-	reporterConfig := reportermodels.ReporterConfig{
+	reporterCfg := reporterservice.ReporterConfig{
 		DatabaseURL:       connStr,
 		DiscordWebhookURL: discordServer.URL,
 		TelegramBotToken:  "fake-token",
 		TelegramChatID:    "fake-chat",
 		Mode:              "test",
 	}
-	reporter := reportermodels.NewReporter(db, reporterConfig, nil)
+	reporter := reporterservice.NewReporter(db, reporterCfg, reportermtrics.NewMetrics())
 
-	// 8. Setup Scheduler
-	schedulerConfig := scheduler.Config{
-		ReporterURL:         "http://localhost:8083",
-		DailyReportTime:     "07:00",
-		HighSeverityThreshold: "high",
-		CheckInterval:       30 * time.Second,
-		EnableDailyReport:   true,
+	// 8. Setup Scheduler (we don't need to keep reference, just ensure it can be created)
+	_ = schedulerservice.NewScheduler(db, schedulerservice.SchedulerConfig{
+		ReporterURL:             getEnvOrDefault("REPORTER_URL", "http://localhost:8083"),
+		DailyReportTime:         "07:00",
+		HighSeverityThreshold:   "high",
+		CheckInterval:           30 * time.Second,
+		EnableDailyReport:       true,
 		EnableHighSeverityAlert: true,
-	}
-	scheduler := scheduler.NewScheduler(db, schedulerConfig)
+		DefaultTimezone:         "Asia/Jakarta",
+	}, schedulermetrics.NewMetrics())
 
 	// Test: Full pipeline webhook -> delivery
 	t.Run("Full pipeline: webhook to delivery", func(t *testing.T) {
@@ -168,20 +164,22 @@ func TestFullPipelineE2E(t *testing.T) {
 		// Step 3: Correlator creates investigation outbox entry
 		requestKey := sha256.Sum256([]byte(fmt.Sprintf("%s:%s:%d", incidentID, eventID, 1)))
 		requestKeyHash := hex.EncodeToString(requestKey[:])
+		_ = requestKeyHash // used in real scenario
 
 		// Step 4: Mock investigator processing (in real scenario, investigator runs and produces evidence)
 		// For this integration test, we'll simulate by directly creating a report request
 
 		// Step 5: Reporter generates report
-		reportReq := reportermodels.ReportPayload{
-				RequestID:   uuid.NewString(),
-				ReportType:  "high_severity",
-				PeriodStart: time.Now().Add(-1 * time.Hour).Format(time.RFC3339),
-				PeriodEnd:   time.Now().Format(time.RFC3339),
-				Timezone:    "Asia/Jakarta",
-				IncidentIDs: []string{incidentID},
-			}
-			reportResp, err := reporter.ProcessReportRequest(ctx, reportReq)
+		reportReq := reportermodel.ReportPayload{
+			ContractVersion: 1,
+			RequestID:       uuid.NewString(),
+			ReportType:      "high_severity",
+			PeriodStart:     time.Now().Add(-1 * time.Hour).Format(time.RFC3339),
+			PeriodEnd:       time.Now().Format(time.RFC3339),
+			Timezone:        "Asia/Jakarta",
+			IncidentIDs:     []string{incidentID},
+		}
+		reportResp, err := reporter.ProcessReportRequest(ctx, reportReq)
 		if err != nil {
 			t.Fatalf("Report generation failed: %v", err)
 		}
@@ -242,6 +240,17 @@ func TestFullPipelineE2E(t *testing.T) {
 			t.Logf("Discord delivery count after retry: %d", discordCount)
 		})
 	})
+}
+
+// waitForDB waits for the database to be ready
+func waitForDB(ctx context.Context, db *sql.DB) error {
+	for i := 0; i < 30; i++ {
+		if err := db.PingContext(ctx); err == nil {
+			return nil
+		}
+		time.Sleep(1 * time.Second)
+	}
+	return fmt.Errorf("database not ready after 30 seconds")
 }
 
 // runMigrations runs the embedded migrations from pamawas-schema
@@ -351,4 +360,12 @@ func runMigrations(db *sql.DB) error {
 		}
 	}
 	return nil
+}
+
+// getEnvOrDefault returns env var value or default
+func getEnvOrDefault(key, defaultValue string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return defaultValue
 }

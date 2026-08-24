@@ -18,7 +18,7 @@ services:
   pamawas-schema:
     image: ghcr.io/pamawas/pamawas-schema:dev
     environment:
-      DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+      DATABASE_URL: "postgres://pamawas:***@postgres:5432/pamawas?sslmode=disable"
       PAMAWAS_SCHEMA_MIGRATE_ONLY: "true"
       PAMAWAS_SCHEMA_USE_EMBEDDED_MIGRATIONS: "true"
     depends_on:
@@ -29,7 +29,7 @@ services:
   pamawas-ingest:
     image: ghcr.io/pamawas/pamawas-ingest:dev
     environment:
-      DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+      DATABASE_URL: "postgres://pamawas:***@postgres:5432/pamawas?sslmode=disable"
       WEBHOOK_TOKEN: "test-token"
       TEST_MODE: "true"
       MAX_BODY_BYTES: "1048576"
@@ -41,11 +41,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   pamawas-correlator:
     image: ghcr.io/pamawas/pamawas-correlator:dev
     environment:
-      DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+      DATABASE_URL: "postgres://pamawas:***@postgres:5432/pamawas?sslmode=disable"
       PORT: "8081"
       LOG_LEVEL: "info"
       ENVIRONMENT: "test"
@@ -54,11 +60,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8081/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   pamawas-investigator:
     image: ghcr.io/pamawas/pamawas-investigator:dev
     environment:
-      DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+      DATABASE_URL: "postgres://pamawas:***@postgres:5432/pamawas?sslmode=disable"
       LLM_BASE_URL: "https://api.openai.com/v1"
       LLM_API_KEY: "${LLM_API_KEY}"
       LLM_MODEL: "gpt-4o-mini"
@@ -72,11 +84,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8082/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   pamawas-scheduler:
     image: ghcr.io/pamawas/pamawas-scheduler:dev
     environment:
-      DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+      DATABASE_URL: "postgres://pamawas:***@postgres:5432/pamawas?sslmode=disable"
       PORT: "8083"
       LOG_LEVEL: "info"
       ENVIRONMENT: "test"
@@ -85,11 +103,17 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8083/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   pamawas-reporter:
     image: ghcr.io/pamawas/pamawas-reporter:dev
     environment:
-      DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+      DATABASE_URL: "postgres://pamawas:***@postgres:5432/pamawas?sslmode=disable"
       DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/test"
       TELEGRAM_BOT_TOKEN: "fake-token"
       TELEGRAM_CHAT_ID: "fake-chat"
@@ -102,13 +126,19 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:8084/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   integration-tests:
     build:
       context: .
       dockerfile: Dockerfile.test
     environment:
-      DATABASE_URL: "postgres://pamawas:pamawas@postgres:5432/pamawas?sslmode=disable"
+      DATABASE_URL: "postgres://pamawas:***@postgres:5432/pamawas?sslmode=disable"
       INGEST_URL: "http://pamawas-ingest:8080"
       CORRELATOR_URL: "http://pamawas-correlator:8081"
       INVESTIGATOR_URL: "http://pamawas-investigator:8082"
@@ -120,13 +150,13 @@ services:
       pamawas-schema:
         condition: service_completed_successfully
       pamawas-ingest:
-        condition: service_started
+        condition: service_healthy
       pamawas-correlator:
-        condition: service_started
+        condition: service_healthy
       pamawas-investigator:
-        condition: service_started
+        condition: service_healthy
       pamawas-scheduler:
-        condition: service_started
+        condition: service_healthy
       pamawas-reporter:
-        condition: service_started
-    command: ["./run-tests.sh"]
+        condition: service_healthy
+    command: ["/run-tests.sh"]
