@@ -32,6 +32,9 @@ WORKDIR /tests
 # Copy test binary from builder
 COPY --from=builder /test-binary /tests/integration-test
 
+# Copy go-junit-report from builder
+COPY --from=builder /go/bin/go-junit-report /usr/local/bin/go-junit-report
+
 # Create test runner script
 RUN echo '#!/bin/bash\n\
 set -euo pipefail\n\
@@ -51,7 +54,6 @@ mkdir -p /test-results\n\
 /tests/integration-test -v -race -count=1 -timeout 20m -json > /test-results/test-output.json 2>&1 || true\n\
 cat /test-results/test-output.json\n\
 # Convert to JUnit XML for CI\n\
-go install github.com/jstemmer/go-junit-report/v2@latest\n\
-/go/bin/go-junit-report < /test-results/test-output.json > /test-results/junit.xml\n' > /run-tests.sh && chmod +x /run-tests.sh
+/usr/local/bin/go-junit-report < /test-results/test-output.json > /test-results/junit.xml\n' > /run-tests.sh && chmod +x /run-tests.sh
 
 CMD ["/run-tests.sh"]
