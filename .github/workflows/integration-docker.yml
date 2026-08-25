@@ -89,6 +89,10 @@ jobs:
       - name: Build test binary
         run: |
           cd pamawas-integration-tests
+          echo "=== Current go.mod ==="
+          cat go.mod
+          echo "=== Go env ==="
+          go env GOMODCACHE
           go test -c -o /tmp/integration-test -v .
         env:
           CGO_ENABLED: 1
