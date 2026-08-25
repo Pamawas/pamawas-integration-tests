@@ -70,12 +70,14 @@ jobs:
 
       - name: Copy component sources to build context
         run: |
+          ls -la
           cp -r pamawas-ingest ./
           cp -r pamawas-correlator ./
           cp -r pamawas-investigator ./
           cp -r pamawas-scheduler ./
           cp -r pamawas-reporter ./
           cp -r pamawas-schema ./
+          ls -la
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
