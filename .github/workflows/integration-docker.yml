@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Pamawas/pamawas-ingest
-          path: ../pamawas-ingest
+          path: pamawas-ingest
           ref: dev
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Pamawas/pamawas-correlator
-          path: ../pamawas-correlator
+          path: pamawas-correlator
           ref: dev
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -40,7 +40,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Pamawas/pamawas-investigator
-          path: ../pamawas-investigator
+          path: pamawas-investigator
           ref: dev
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -48,7 +48,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Pamawas/pamawas-scheduler
-          path: ../pamawas-scheduler
+          path: pamawas-scheduler
           ref: dev
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -56,7 +56,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Pamawas/pamawas-reporter
-          path: ../pamawas-reporter
+          path: pamawas-reporter
           ref: dev
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -64,7 +64,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Pamawas/pamawas-schema
-          path: ../pamawas-schema
+          path: pamawas-schema
           ref: dev
           token: ${{ secrets.GITHUB_TOKEN }}
 
