@@ -84,6 +84,7 @@ jobs:
 
       - name: Run docker-compose integration tests
         run: |
+          cd pamawas-integration-tests
           docker compose up --build --abort-on-container-exit integration-tests
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
@@ -102,4 +103,6 @@ jobs:
 
       - name: Cleanup
         if: always()
-        run: docker compose down -v
+        run: |
+          cd pamawas-integration-tests
+          docker compose down -v
