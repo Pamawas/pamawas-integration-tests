@@ -135,8 +135,8 @@ services:
 
   integration-tests:
     build:
-      context: .
-      dockerfile: Dockerfile.test
+      context: ..
+      dockerfile: pamawas-integration-tests/Dockerfile.test
     environment:
       DATABASE_URL: "postgres://pamawas:***@postgres:5432/pamawas?sslmode=disable"
       INGEST_URL: "http://pamawas-ingest:8080"
