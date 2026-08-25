@@ -110,15 +110,14 @@ jobs:
 
       - name: Build test binary
         run: |
-          cd pamawas-integration-tests
           echo "=== Current go.mod ==="
-          cat go.mod
+          cat pamawas-integration-tests/go.mod
           echo "=== Go env ==="
           go env GOMODCACHE
           echo "=== go mod tidy ==="
           go mod tidy 2>&1 || echo "go mod tidy failed, continuing..."
           echo "=== go test -c ==="
-          go test -c -o /tmp/integration-test -v . 2>&1 | tee /tmp/build.log
+          go test -c -o /tmp/integration-test -v ./pamawas-integration-tests 2>&1 | tee /tmp/build.log
           echo "Build log:"
           cat /tmp/build.log
         env:
