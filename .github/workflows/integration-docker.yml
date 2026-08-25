@@ -70,6 +70,20 @@ jobs:
           ref: dev
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26'
+          cache: true
+          cache-dependency-path: pamawas-integration-tests/go.sum
+
+      - name: Build test binary
+        run: |
+          cd pamawas-integration-tests
+          go test -c -o /tmp/integration-test -v .
+        env:
+          CGO_ENABLED: 1
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -77,17 +91,51 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Pull pre-built GHCR images
-        run: |
-          docker compose pull postgres pamawas-schema pamawas-ingest pamawas-correlator pamawas-investigator pamawas-scheduler pamawas-reporter || echo "Some images not found, will be pulled during up"
-        continue-on-error: true
-
-      - name: Run docker-compose integration tests
+      - name: Start services with docker-compose
         run: |
           cd pamawas-integration-tests
-          docker compose up --build --abort-on-container-exit integration-tests
+          docker compose up -d --wait
+
+      - name: Wait for services to be ready
+        run: |
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U pamawas -d pamawas 2>/dev/null; then
+              echo "PostgreSQL ready"
+              break
+            fi
+            echo "Waiting for PostgreSQL... ($i/30)"
+            sleep 2
+          done
+          for port in 8080 8081 8082 8083 8084; do
+            for i in {1..15}; do
+              if curl -sf "http://localhost:$port/healthz" >/dev/null; then
+                echo "Service on port $port ready"
+                break
+              fi
+              echo "Waiting for port $port... ($i/15)"
+              sleep 2
+            done
+          done
+
+      - name: Run integration tests
+        run: |
+          DATABASE_URL="postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable" \
+          INGEST_URL="http://localhost:8080" \
+          CORRELATOR_URL="http://localhost:8081" \
+          INVESTIGATOR_URL="http://localhost:8082" \
+          SCHEDULER_URL="http://localhost:8083" \
+          REPORTER_URL="http://localhost:8084" \
+          LLM_API_KEY="${{ secrets.LLM_API_KEY }}" \
+          /tmp/integration-test -v -race -count=1 -timeout 20m -json 2>&1 | tee test-output.json
         env:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+
+      - name: Convert test output to JUnit
+        if: always()
+        run: |
+          cd pamawas-integration-tests
+          go install github.com/jstemmer/go-junit-report/v2@latest
+          /go/bin/go-junit-report < test-output.json > junit.xml
 
       - name: Upload test results
         if: always()
@@ -95,10 +143,8 @@ jobs:
         with:
           name: integration-test-results
           path: |
-            test-results/
-            *.xml
-            *.out
-            *.log
+            pamawas-integration-tests/junit.xml
+            pamawas-integration-tests/test-output.json
           retention-days: 7
 
       - name: Cleanup
