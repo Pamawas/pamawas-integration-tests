@@ -20,6 +20,54 @@ jobs:
       - name: Checkout integration tests
         uses: actions/checkout@v4
 
+      - name: Checkout pamawas-ingest
+        uses: actions/checkout@v4
+        with:
+          repository: Pamawas/pamawas-ingest
+          path: ../pamawas-ingest
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout pamawas-correlator
+        uses: actions/checkout@v4
+        with:
+          repository: Pamawas/pamawas-correlator
+          path: ../pamawas-correlator
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout pamawas-investigator
+        uses: actions/checkout@v4
+        with:
+          repository: Pamawas/pamawas-investigator
+          path: ../pamawas-investigator
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout pamawas-scheduler
+        uses: actions/checkout@v4
+        with:
+          repository: Pamawas/pamawas-scheduler
+          path: ../pamawas-scheduler
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout pamawas-reporter
+        uses: actions/checkout@v4
+        with:
+          repository: Pamawas/pamawas-reporter
+          path: ../pamawas-reporter
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Checkout pamawas-schema
+        uses: actions/checkout@v4
+        with:
+          repository: Pamawas/pamawas-schema
+          path: ../pamawas-schema
+          ref: dev
+          token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
