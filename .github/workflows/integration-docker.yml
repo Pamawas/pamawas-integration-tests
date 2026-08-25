@@ -10,7 +10,7 @@ on:
 jobs:
   integration-tests:
     name: Cross-Component E2E Tests
-    runs-on: self-hosted
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: read
