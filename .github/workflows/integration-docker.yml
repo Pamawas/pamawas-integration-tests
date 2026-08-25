@@ -68,16 +68,15 @@ jobs:
           ref: dev
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Copy component sources to build context
+      - name: Copy component sources to integration-tests for Docker build
         run: |
-          ls -la
-          cp -r pamawas-ingest ./
-          cp -r pamawas-correlator ./
-          cp -r pamawas-investigator ./
-          cp -r pamawas-scheduler ./
-          cp -r pamawas-reporter ./
-          cp -r pamawas-schema ./
-          ls -la
+          cp -r pamawas-ingest pamawas-integration-tests/
+          cp -r pamawas-correlator pamawas-integration-tests/
+          cp -r pamawas-investigator pamawas-integration-tests/
+          cp -r pamawas-scheduler pamawas-integration-tests/
+          cp -r pamawas-reporter pamawas-integration-tests/
+          cp -r pamawas-schema pamawas-integration-tests/
+          ls -la pamawas-integration-tests/
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
