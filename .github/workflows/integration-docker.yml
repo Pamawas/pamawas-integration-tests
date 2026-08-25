@@ -118,7 +118,9 @@ jobs:
           echo "=== go mod tidy ==="
           go mod tidy 2>&1 || echo "go mod tidy failed, continuing..."
           echo "=== go test -c ==="
-          go test -c -o /tmp/integration-test -v . 2>&1
+          go test -c -o /tmp/integration-test -v . 2>&1 | tee /tmp/build.log
+          echo "Build log:"
+          cat /tmp/build.log
         env:
           CGO_ENABLED: 1
 
