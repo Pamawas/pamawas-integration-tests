@@ -77,6 +77,15 @@ jobs:
           cache: true
           cache-dependency-path: pamawas-integration-tests/go.sum
 
+      - name: Clean Go module cache
+        run: go clean -modcache
+
+      - name: Verify workspace structure
+        run: |
+          ls -la
+          echo "=== pamawas-integration-tests/go.mod ==="
+          cat pamawas-integration-tests/go.mod
+
       - name: Build test binary
         run: |
           cd pamawas-integration-tests
