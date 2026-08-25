@@ -3,6 +3,9 @@ FROM golang:1.26-trixie AS builder
 
 WORKDIR /github/workspace/integration-tests
 
+# Install go-junit-report for test output conversion
+RUN go install github.com/jstemmer/go-junit-report/v2@latest
+
 # Copy go.mod and go.sum first for caching
 COPY go.mod go.sum ./
 
@@ -44,6 +47,11 @@ for i in {1..30}; do\n\
 done\n\
 \n\
 echo "Running integration tests..."\n\
-/tests/integration-test -v -race -count=1 -timeout 20m\n' > /run-tests.sh && chmod +x /run-tests.sh
+mkdir -p /test-results\n\
+/tests/integration-test -v -race -count=1 -timeout 20m -json > /test-results/test-output.json 2>&1 || true\n\
+cat /test-results/test-output.json\n\
+# Convert to JUnit XML for CI\n\
+go install github.com/jstemmer/go-junit-report/v2@latest\n\
+/go/bin/go-junit-report < /test-results/test-output.json > /test-results/junit.xml\n' > /run-tests.sh && chmod +x /run-tests.sh
 
 CMD ["/run-tests.sh"]

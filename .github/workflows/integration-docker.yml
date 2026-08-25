@@ -35,7 +35,8 @@ jobs:
 
       - name: Pull pre-built GHCR images
         run: |
-          docker compose pull postgres pamawas-schema pamawas-ingest pamawas-correlator pamawas-investigator pamawas-scheduler pamawas-reporter
+          docker compose pull postgres pamawas-schema pamawas-ingest pamawas-correlator pamawas-investigator pamawas-scheduler pamawas-reporter || echo "Some images not found, will be pulled during up"
+        continue-on-error: true
 
       - name: Run docker-compose integration tests
         run: |
@@ -49,6 +50,7 @@ jobs:
         with:
           name: integration-test-results
           path: |
+            test-results/
             *.xml
             *.out
             *.log
