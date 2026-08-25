@@ -7,12 +7,12 @@ WORKDIR /github/workspace/integration-tests
 RUN go install github.com/jstemmer/go-junit-report/v2@latest
 
 # Copy component source code (needed for replace directives in go.mod)
-COPY pamawas-ingest ./pamawas-ingest
-COPY pamawas-correlator ./pamawas-correlator
-COPY pamawas-investigator ./pamawas-investigator
-COPY pamawas-scheduler ./pamawas-scheduler
-COPY pamawas-reporter ./pamawas-reporter
-COPY pamawas-schema ./pamawas-schema
+COPY ../pamawas-ingest ./pamawas-ingest
+COPY ../pamawas-correlator ./pamawas-correlator
+COPY ../pamawas-investigator ./pamawas-investigator
+COPY ../pamawas-scheduler ./pamawas-scheduler
+COPY ../pamawas-reporter ./pamawas-reporter
+COPY ../pamawas-schema ./pamawas-schema
 
 # Copy go.mod and go.sum first for caching
 COPY go.mod go.sum ./
