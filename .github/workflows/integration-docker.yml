@@ -77,8 +77,21 @@ jobs:
           cache: true
           cache-dependency-path: pamawas-integration-tests/go.sum
 
-      - name: Clean Go module cache
-        run: go clean -modcache
+      - name: Clean all Go caches
+        run: |
+          go clean -modcache
+          go clean -cache
+          go clean -testcache
+
+      - name: Verify component sources exist
+        run: |
+          for dir in pamawas-ingest pamawas-correlator pamawas-investigator pamawas-scheduler pamawas-reporter pamawas-schema; do
+            if [ ! -d "$dir" ]; then
+              echo "ERROR: $dir not found at workspace root"
+              exit 1
+            fi
+            echo "Found $dir with go.mod: $(cat $dir/go.mod | head -1)"
+          done
 
       - name: Verify no go.work file
         run: |
