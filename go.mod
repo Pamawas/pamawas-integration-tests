@@ -13,9 +13,9 @@ require (
 )
 
 replace (
-	github.com/Pamawas/pamawas-correlator => ../pamawas-correlator
-	github.com/Pamawas/pamawas-ingest => ../pamawas-ingest
-	github.com/Pamawas/pamawas-reporter => ../pamawas-reporter
-	github.com/Pamawas/pamawas-scheduler => ../pamawas-scheduler
-	github.com/Pamawas/pamawas-schema => ../pamawas-schema
+	github.com/Pamawas/pamawas-correlator => ./pamawas-correlator
+	github.com/Pamawas/pamawas-ingest => ./pamawas-ingest
+	github.com/Pamawas/pamawas-reporter => ./pamawas-reporter
+	github.com/Pamawas/pamawas-scheduler => ./pamawas-scheduler
+	github.com/Pamawas/pamawas-schema => ./pamawas-schema
 )
