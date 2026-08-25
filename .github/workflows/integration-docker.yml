@@ -80,6 +80,15 @@ jobs:
       - name: Clean Go module cache
         run: go clean -modcache
 
+      - name: Verify no go.work file
+        run: |
+          if [ -f go.work ]; then
+            echo "ERROR: go.work file found!"
+            cat go.work
+            exit 1
+          fi
+          echo "No go.work file found"
+
       - name: Verify workspace structure
         run: |
           ls -la
