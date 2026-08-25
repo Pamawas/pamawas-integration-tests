@@ -102,6 +102,7 @@ jobs:
           cat go.mod
           echo "=== Go env ==="
           go env GOMODCACHE
+          go mod tidy 2>&1 || true
           go test -c -o /tmp/integration-test -v .
         env:
           CGO_ENABLED: 1
