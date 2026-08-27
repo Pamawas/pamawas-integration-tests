@@ -14,7 +14,6 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
-      packages: read
 
     steps:
       - name: Checkout integration tests
@@ -38,35 +37,11 @@ jobs:
           ref: dev
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Checkout pamawas-investigator
-        uses: actions/checkout@v4
-        with:
-          repository: Pamawas/pamawas-investigator
-          path: pamawas-investigator
-          ref: dev
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Checkout pamawas-scheduler
-        uses: actions/checkout@v4
-        with:
-          repository: Pamawas/pamawas-scheduler
-          path: pamawas-scheduler
-          ref: dev
-          token: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Checkout pamawas-reporter
         uses: actions/checkout@v4
         with:
           repository: Pamawas/pamawas-reporter
           path: pamawas-reporter
-          ref: dev
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Checkout pamawas-schema
-        uses: actions/checkout@v4
-        with:
-          repository: Pamawas/pamawas-schema
-          path: pamawas-schema
           ref: dev
           token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -77,65 +52,30 @@ jobs:
           cache: true
           cache-dependency-path: pamawas-integration-tests/go.sum
 
-      - name: Clean all Go caches
+      - name: Clean Go caches
         run: |
-          go clean -modcache
+          cd pamawas-integration-tests
           go clean -cache
           go clean -testcache
 
-      - name: Verify component sources exist
-        run: |
-          for dir in pamawas-ingest pamawas-correlator pamawas-investigator pamawas-scheduler pamawas-reporter pamawas-schema; do
-            if [ ! -d "$dir" ]; then
-              echo "ERROR: $dir not found at workspace root"
-              exit 1
-            fi
-            echo "Found $dir with go.mod: $(cat $dir/go.mod | head -1)"
-          done
-
-      - name: Verify no go.work file
-        run: |
-          if [ -f go.work ]; then
-            echo "ERROR: go.work file found!"
-            cat go.work
-            exit 1
-          fi
-          echo "No go.work file found"
-
-      - name: Verify workspace structure
-        run: |
-          ls -la
-          echo "=== pamawas-integration-tests/go.mod ==="
-          cat pamawas-integration-tests/go.mod
-
       - name: Build test binary
         run: |
-          echo "=== Current go.mod ==="
-          cat pamawas-integration-tests/go.mod
-          echo "=== Go env ==="
-          go env GOMODCACHE
+          cd pamawas-integration-tests
           echo "=== go mod tidy ==="
-          go mod tidy 2>&1 || echo "go mod tidy failed, continuing..."
+          go mod tidy 2>&1
           echo "=== go test -c ==="
-          go test -c -o /tmp/integration-test -v ./pamawas-integration-tests 2>&1 | tee /tmp/build.log
+          go test -c -o /tmp/integration-test -v . 2>&1 | tee /tmp/build.log
           echo "Build log:"
           cat /tmp/build.log
         env:
           CGO_ENABLED: 1
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Start services with docker-compose
+      - name: Start PostgreSQL with docker-compose
         run: |
           cd pamawas-integration-tests
           docker compose up -d --wait
 
-      - name: Wait for services to be ready
+      - name: Wait for PostgreSQL to be ready
         run: |
           for i in {1..30}; do
             if pg_isready -h localhost -p 5432 -U pamawas -d pamawas 2>/dev/null; then
@@ -145,29 +85,12 @@ jobs:
             echo "Waiting for PostgreSQL... ($i/30)"
             sleep 2
           done
-          for port in 8080 8081 8082 8083 8084; do
-            for i in {1..15}; do
-              if curl -sf "http://localhost:$port/healthz" >/dev/null; then
-                echo "Service on port $port ready"
-                break
-              fi
-              echo "Waiting for port $port... ($i/15)"
-              sleep 2
-            done
-          done
 
       - name: Run integration tests
         run: |
+          cd pamawas-integration-tests
           DATABASE_URL="postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable" \
-          INGEST_URL="http://localhost:8080" \
-          CORRELATOR_URL="http://localhost:8081" \
-          INVESTIGATOR_URL="http://localhost:8082" \
-          SCHEDULER_URL="http://localhost:8083" \
-          REPORTER_URL="http://localhost:8084" \
-          LLM_API_KEY="${{ secrets.LLM_API_KEY }}" \
-          /tmp/integration-test -v -race -count=1 -timeout 20m -json 2>&1 | tee test-output.json
-        env:
-          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          /tmp/integration-test -v -race -count=1 -timeout 10m 2>&1 | tee test-output.json
 
       - name: Convert test output to JUnit
         if: always()

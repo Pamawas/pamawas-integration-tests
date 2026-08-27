@@ -1,0 +1,18 @@
+# Build artifacts
+/test-binary
+/integration-test
+*.test
+
+# Test outputs
+/test-results
+test-output.json
+junit.xml
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store

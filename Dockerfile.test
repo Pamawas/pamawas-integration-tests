@@ -1,7 +1,9 @@
-# Builder stage - compile test binary
+# Dockerfile.test - Build the integration test binary
+# The test uses a real PostgreSQL database (via docker-compose) and fake
+# transports for all external delivery providers (Discord, Telegram).
 FROM golang:1.26-trixie AS builder
 
-WORKDIR /github/workspace/integration-tests
+WORKDIR /build
 
 # Install go-junit-report for test output conversion
 RUN go install github.com/jstemmer/go-junit-report/v2@latest
@@ -9,10 +11,7 @@ RUN go install github.com/jstemmer/go-junit-report/v2@latest
 # Copy component source code (needed for replace directives in go.mod)
 COPY ../pamawas-ingest ./pamawas-ingest
 COPY ../pamawas-correlator ./pamawas-correlator
-COPY ../pamawas-investigator ./pamawas-investigator
-COPY ../pamawas-scheduler ./pamawas-scheduler
 COPY ../pamawas-reporter ./pamawas-reporter
-COPY ../pamawas-schema ./pamawas-schema
 
 # Copy go.mod and go.sum first for caching
 COPY go.mod go.sum ./
@@ -29,7 +28,7 @@ RUN CGO_ENABLED=1 go test -c -o /test-binary -v .
 # Runtime stage - minimal image with test binary
 FROM debian:trixie-slim
 
-# Install test dependencies (postgresql-client for any DB checks)
+# Install test dependencies
 RUN apt-get update && apt-get install -y \
     postgresql-client \
     ca-certificates \
@@ -48,7 +47,7 @@ RUN echo '#!/bin/bash\n\
 set -euo pipefail\n\
 \n\
 echo "Waiting for PostgreSQL..."\n\
-for i in {1..30}; do\n\
+for i in $(seq 1 30); do\n\
   if pg_isready -h postgres -p 5432 -U pamawas -d pamawas 2>/dev/null; then\n\
     echo "PostgreSQL is ready"\n\
     break\n\
@@ -59,9 +58,10 @@ done\n\
 \n\
 echo "Running integration tests..."\n\
 mkdir -p /test-results\n\
-/tests/integration-test -v -race -count=1 -timeout 20m -json > /test-results/test-output.json 2>&1 || true\n\
-cat /test-results/test-output.json\n\
+/tests/integration-test -v -race -count=1 -timeout 10m 2>&1 | tee /test-results/test-output.json\n\
+\n\
 # Convert to JUnit XML for CI\n\
-/usr/local/bin/go-junit-report < /test-results/test-output.json > /test-results/junit.xml\n' > /run-tests.sh && chmod +x /run-tests.sh
+go-junit-report < /test-results/test-output.json > /test-results/junit.xml\n\
+' > /run-tests.sh && chmod +x /run-tests.sh
 
 CMD ["/run-tests.sh"]
