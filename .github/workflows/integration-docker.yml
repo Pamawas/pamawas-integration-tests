@@ -61,14 +61,8 @@ jobs:
       - name: Build test binary
         run: |
           cd pamawas-integration-tests
-          echo "=== go mod tidy ==="
           go mod tidy 2>&1
-          echo "=== go test -c ==="
-          go test -c -o /tmp/integration-test -v . 2>&1 | tee /tmp/build.log
-          echo "Build log:"
-          cat /tmp/build.log
-        env:
-          CGO_ENABLED: 1
+          go vet ./... 2>&1
 
       - name: Start PostgreSQL with docker-compose
         run: |
@@ -90,7 +84,7 @@ jobs:
         run: |
           cd pamawas-integration-tests
           DATABASE_URL="postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable" \
-          /tmp/integration-test -v -race -count=1 -timeout 10m -json 2>&1 | tee test-output.json
+          go test -v -race -count=1 -timeout 10m -json . 2>&1 | tee test-output.json
 
       - name: Convert test output to JUnit
         if: always()
