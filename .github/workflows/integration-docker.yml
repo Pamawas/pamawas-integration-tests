@@ -90,14 +90,14 @@ jobs:
         run: |
           cd pamawas-integration-tests
           DATABASE_URL="postgres://pamawas:pamawas@localhost:5432/pamawas?sslmode=disable" \
-          /tmp/integration-test -v -race -count=1 -timeout 10m 2>&1 | tee test-output.json
+          /tmp/integration-test -v -race -count=1 -timeout 10m -json 2>&1 | tee test-output.json
 
       - name: Convert test output to JUnit
         if: always()
         run: |
           cd pamawas-integration-tests
           go install github.com/jstemmer/go-junit-report/v2@latest
-          /go/bin/go-junit-report < test-output.json > junit.xml
+          $(go env GOPATH)/bin/go-junit-report < test-output.json > junit.xml
 
       - name: Upload test results
         if: always()
