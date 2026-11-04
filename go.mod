@@ -1,6 +1,6 @@
 module github.com/Pamawas/pamawas-integration-tests
 
-go 1.26
+go 1.27
 
 require (
 	github.com/Pamawas/pamawas-correlator v0.0.0
