@@ -1,4 +1,4 @@
-# .golangci.yml - golangci-lint configuration for Pamawas integration tests
+# .golangci.yml - golangci-lint configuration for Pamawas ingest
 # See https://golangci-lint.run/docs/configuration/ for all options
 version: "2"
 
@@ -14,6 +14,8 @@ linters:
     - unparam
     - noctx
     - rowserrcheck
+    - gocyclo
+    - gocognit
   settings:
     gosec:
       excludes:
@@ -41,6 +43,9 @@ linters:
           - noctx
           - unused
           - staticcheck
+      - path: testutils/migrations\.go
+        linters:
+          - errcheck
 
 issues:
   max-issues-per-linter: 0
