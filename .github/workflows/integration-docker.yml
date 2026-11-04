@@ -17,12 +17,12 @@ jobs:
 
     steps:
       - name: Checkout integration tests
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           path: pamawas-integration-tests
 
       - name: Checkout pamawas-ingest
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Pamawas/pamawas-ingest
           path: pamawas-ingest
@@ -30,7 +30,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout pamawas-correlator
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Pamawas/pamawas-correlator
           path: pamawas-correlator
@@ -38,7 +38,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Checkout pamawas-reporter
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Pamawas/pamawas-reporter
           path: pamawas-reporter
