@@ -3,6 +3,7 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main, dev ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main, dev ]
 
@@ -35,12 +36,23 @@ jobs:
         fail_ci_if_error: false
         token: ${{ secrets.CODECOV_TOKEN }}
 
+    # Build golangci-lint from source with this job's Go toolchain rather than
+    # letting golangci-lint-action install a binary. A linter built by an older
+    # Go cannot decode the export data that Go 1.27's standard library emits,
+    # and typecheck fails on fmt/os/strings/flag before any project package is
+    # read:
+    # cannot decode "internal/goarch", export data version 5 is greater
+    # than maximum supported version 4
+    # GOTOOLCHAIN=local pins the build to the Go that setup-go installed above.
+    - name: Install golangci-lint
+      env:
+        GOTOOLCHAIN: local
+      run: |
+        go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
+        echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
     - name: Run linter
-      uses: golangci/golangci-lint-action@v7
-      with:
-        install-mode: 'goinstall'
-        version: v2.13.2
-        args: ./...
+      run: golangci-lint run ./...
 
   build:
     name: Build & Test Build
@@ -60,7 +72,7 @@ jobs:
       run: go mod download
 
     - name: Build binary
-      run: CGO_ENABLED=0 go build -o main .
+      run: CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o main .
 
     - name: Verify binary runs
       run: ./main --help || true
@@ -77,9 +89,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -98,9 +107,14 @@ jobs:
         images: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
         tags: |
           type=ref,event=branch
+          type=ref,event=tag
           type=ref,event=pr
           type=sha
           type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Set short git commit SHA
+      id: vars
+      run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -110,9 +124,11 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          VERSION=${{ github.ref_name }}-${{ steps.vars.outputs.short_sha }}
         platforms: linux/amd64,linux/arm64
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+        cache-from: type=gha,scope=${{ github.workflow }}
+        cache-to: type=gha,mode=max,scope=${{ github.workflow }}
 
   security:
     name: Security Scan
