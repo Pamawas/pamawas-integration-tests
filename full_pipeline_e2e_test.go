@@ -29,17 +29,7 @@ import (
 )
 
 // TestFullPipelineE2E runs the complete webhook-to-delivery pipeline
-// against a real PostgreSQL database (via docker-compose) and fake delivery
-// transports for external providers (Discord, Telegram).
-//
-// The journey exercised:
-//   ingest (webhook -> event) -> correlate (event -> incident -> outbox)
-//   -> investigate (outbox -> evidence) -> report (report request -> report + delivery attempts)
-//   -> deliver (send to fake Discord/Telegram servers)
-//
-// Per the MVP verification scope, this test uses deterministic fake transports
-// for all external providers. Real PostgreSQL is required for transaction,
-// constraint, and lifecycle semantics.
+// against a real PostgreSQL database with fake Discord/Telegram transports.
 func TestFullPipelineE2E(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -67,8 +57,7 @@ func TestFullPipelineE2E(t *testing.T) {
 		t.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	// Clean up any existing test data (migrations create tables with IF NOT EXISTS,
-	// but we need a clean slate for deterministic test runs).
+	// Clean up test data for a deterministic run.
 	if err := cleanupTestData(db); err != nil {
 		t.Fatalf("Failed to clean up test data: %v", err)
 	}
@@ -173,10 +162,7 @@ func TestFullPipelineE2E(t *testing.T) {
 		}
 		t.Logf("Created incident: %s", incidentID)
 
-		// Step 3: Create terminal investigation evidence for the incident.
-		// This simulates the investigator having completed its investigation
-		// and stored evidence in the database. We create the investigation run
-		// and evidence directly since the investigator service is not running.
+		// Step 3: Create terminal investigation evidence (simulating a finished investigator run).
 		runID := uuid.NewString()
 		_, err = db.ExecContext(ctx, `
 			INSERT INTO investigation_runs (id, incident_id, request_key_hash, status,
@@ -234,9 +220,7 @@ func TestFullPipelineE2E(t *testing.T) {
 		}
 		t.Logf("Generated report: %s", reportID)
 
-		// Step 7: Delivery is triggered (async).
-		// Poll the fake transport until deliveries appear or timeout,
-		// then wait a bit more for the async updateReportDeliveryStatus DB calls.
+		// Step 7: Delivery is async; poll the fake transport until deliveries appear.
 		waitForAsyncDelivery(t, deliveryTransport)
 
 		// Step 8: Verify delivery was captured.
@@ -270,14 +254,12 @@ func TestFullPipelineE2E(t *testing.T) {
 				t.Errorf("Report should contain evidence findings, not 'investigation unavailable'")
 			}
 
-			// The report should NOT fabricate availability (no percentage claiming availability).
-			// "unavailable" is an honest status; "82%" is evidence confidence, not availability.
+			// The report must not fabricate availability (evidence confidence is not availability).
 			if strings.Contains(content, "Availability:") && strings.Contains(content, "available") && strings.Contains(content, "%") && !strings.Contains(content, "unavailable") {
 				t.Errorf("Report should not fabricate availability percentage")
 			}
 
-			// The report should not claim a root cause without evidence.
-			// Evidence content "Database connection pool exhausted" should appear.
+			// The report must not claim a root cause without evidence; the evidence text should appear.
 			if !strings.Contains(content, "Database connection pool exhausted") {
 				t.Errorf("Report content should contain evidence: 'Database connection pool exhausted'")
 			}
@@ -337,9 +319,8 @@ func TestFullPipelineE2E(t *testing.T) {
 	})
 }
 
-// waitForAsyncDelivery polls the fake transport until both Discord and Telegram
-// deliveries are captured, then waits an additional period to allow the async
-// updateReportDeliveryStatus DB calls to complete.
+// waitForAsyncDelivery polls the fake transport until both deliveries are captured,
+// then allows async DB status updates to settle.
 func waitForAsyncDelivery(t *testing.T, transport *fakes.FakeDeliveryTransport) {
 	t.Helper()
 	deadline := time.Now().Add(10 * time.Second)
@@ -347,8 +328,7 @@ func waitForAsyncDelivery(t *testing.T, transport *fakes.FakeDeliveryTransport) 
 		discordDeliveries := transport.GetDeliveriesByChannel("discord")
 		telegramDeliveries := transport.GetDeliveriesByChannel("telegram")
 		if len(discordDeliveries) > 0 && len(telegramDeliveries) > 0 {
-			// Both deliveries happened. Wait a bit more for the async
-			// updateReportDeliveryStatus DB calls to complete.
+		// Both deliveries happened; let async DB status updates settle.
 			time.Sleep(500 * time.Millisecond)
 			return
 		}
@@ -368,8 +348,7 @@ func waitForDB(ctx context.Context, db *sql.DB) error {
 	return fmt.Errorf("database not ready after 30 seconds")
 }
 
-// runMigrations runs the actual schema migrations from pamawas-schema.
-// It embeds the migration SQL inline to avoid filesystem path dependencies in CI.
+// runMigrations runs inline copies of the pamawas-schema migration SQL (avoids path deps in CI).
 func runMigrations(db *sql.DB) error {
 	queries := []string{
 		// Schema migrations tracking
