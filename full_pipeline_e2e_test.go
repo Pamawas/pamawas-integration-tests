@@ -14,16 +14,16 @@ import (
 	"testing"
 	"time"
 
-	correlatorservice "github.com/Pamawas/pamawas-correlator/service"
 	correlatormetrics "github.com/Pamawas/pamawas-correlator/metrics"
+	correlatorservice "github.com/Pamawas/pamawas-correlator/service"
 	ingestconfig "github.com/Pamawas/pamawas-ingest/config"
 	ingesthandlers "github.com/Pamawas/pamawas-ingest/handlers"
 	ingestmetrics "github.com/Pamawas/pamawas-ingest/metrics"
 	ingestmodel "github.com/Pamawas/pamawas-ingest/models"
 	"github.com/Pamawas/pamawas-reporter/fakes"
-	reporterservice "github.com/Pamawas/pamawas-reporter/service"
-	reportermodel "github.com/Pamawas/pamawas-reporter/models"
 	reportermtrics "github.com/Pamawas/pamawas-reporter/metrics"
+	reportermodel "github.com/Pamawas/pamawas-reporter/models"
+	reporterservice "github.com/Pamawas/pamawas-reporter/service"
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 )
@@ -328,7 +328,7 @@ func waitForAsyncDelivery(t *testing.T, transport *fakes.FakeDeliveryTransport) 
 		discordDeliveries := transport.GetDeliveriesByChannel("discord")
 		telegramDeliveries := transport.GetDeliveriesByChannel("telegram")
 		if len(discordDeliveries) > 0 && len(telegramDeliveries) > 0 {
-		// Both deliveries happened; let async DB status updates settle.
+			// Both deliveries happened; let async DB status updates settle.
 			time.Sleep(500 * time.Millisecond)
 			return
 		}
